@@ -26,7 +26,7 @@ public class HitDistribution {
         String output = args[1];
         String master = args[2];
 
-        SparkConf sparkConf = new SparkConf().setAppName("IP with 7 counter").setMaster(master);
+        SparkConf sparkConf = new SparkConf().setAppName("Hit distribution").setMaster(master);
         JavaSparkContext sparkContext = new JavaSparkContext(sparkConf);
 
         List<String> list = sparkContext.textFile(input)
