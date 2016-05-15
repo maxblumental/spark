@@ -14,7 +14,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
-public class TransmittedData {
+/**
+ * Created by maxim on 15.05.16.
+ */
+public class HitDistribution {
     public static void main(String[] args) {
         if (args.length != 3)
             throw new IllegalArgumentException("Not enough arguments!");
@@ -23,17 +26,15 @@ public class TransmittedData {
         String output = args[1];
         String master = args[2];
 
-        SparkConf sparkConf = new SparkConf().setAppName("Total transmitted data").setMaster(master);
+        SparkConf sparkConf = new SparkConf().setAppName("IP with 7 counter").setMaster(master);
         JavaSparkContext sparkContext = new JavaSparkContext(sparkConf);
 
         List<String> list = sparkContext.textFile(input)
-                .mapToPair(new PairFunction<String, String, Integer>() {
+                .mapToPair(new PairFunction<String, Integer, Integer>() {
                     @Override
-                    public Tuple2<String, Integer> call(String string) throws Exception {
-                        String[] split = string.split("\\s+");
-                        String ip = split[0];
-                        int size = Integer.parseInt(split[9]);
-                        return new Tuple2<>(ip, size);
+                    public Tuple2<Integer, Integer> call(String s) throws Exception {
+                        int hour = Integer.parseInt(s.split("\\s+")[3].split(":")[1]);
+                        return new Tuple2<>(hour, 1);
                     }
                 })
                 .reduceByKey(new Function2<Integer, Integer, Integer>() {
@@ -42,24 +43,24 @@ public class TransmittedData {
                         return v1 + v2;
                     }
                 })
-                .mapToPair(new PairFunction<Tuple2<String, Integer>, Integer, String>() {
+                .mapToPair(new PairFunction<Tuple2<Integer, Integer>, Integer, Integer>() {
                     @Override
-                    public Tuple2<Integer, String> call(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
-                        return stringIntegerTuple2.swap();
+                    public Tuple2<Integer, Integer> call(Tuple2<Integer, Integer> integerIntegerTuple2) throws Exception {
+                        return integerIntegerTuple2.swap();
                     }
                 })
                 .sortByKey(false)
-                .map(new Function<Tuple2<Integer, String>, String>() {
+                .map(new Function<Tuple2<Integer, Integer>, String>() {
                     @Override
-                    public String call(Tuple2<Integer, String> v1) throws Exception {
-                        return String.format("%s %d", v1._2, v1._1);
+                    public String call(Tuple2<Integer, Integer> v1) throws Exception {
+                        return String.format("%d %d", v1._2, v1._1);
                     }
                 })
                 .collect();
 
-        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(output), Charset.defaultCharset())) {
+        try (BufferedWriter bufferedWriter = Files.newBufferedWriter(Paths.get(output), Charset.defaultCharset())) {
             for (String s : list) {
-                writer.write(s + "\n");
+                bufferedWriter.write(s + '\n');
             }
         } catch (IOException e) {
             e.printStackTrace();
